@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Rate My Teacher JLHS</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Rate My Teacher JLHS</h1>
+    <form id="ratingForm">
+        <label for="teacher">选择教师：</label>
+        <select id="teacher" name="teacher">
+            <option value="" disabled selected>请选择教师</option>
+        </select>
+        <br><br>
+        <button type="button" id="addTeacherBtn">添加教师</button>
+        <input type="text" id="newTeacherInput" placeholder="输入教师名称">
+        <br><br>
+        <label for="rating">评分：</label>
+        <div class="rating">
+            <input type="radio" id="star5" name="rating" value="5"><label for="star5" title="5星">★</label>
+            <input type="radio" id="star4" name="rating" value="4"><label for="star4" title="4星">★</label>
+            <input type="radio" id="star3" name="rating" value="3"><label for="star3" title="3星">★</label>
+            <input type="radio" id="star2" name="rating" value="2"><label for="star2" title="2星">★</label>
+            <input type="radio" id="star1" name="rating" value="1"><label for="star1" title="1星">★</label>
+        </div>
+        <br><br>
+        <label for="comment">评论：</label>
+        <textarea id="comment" name="comment" rows="4" cols="50"></textarea>
+        <br><br>
+        <button type="submit">提交</button>
+    </form>
+    <h2>评分和评论</h2>
+    <div id="reviews">
+        <p>暂无评论。</p>
+    </div>
+    <button id="clearStorageBtn">清除所有数据</button>
+    <script src="script.js"></script>
+</body>
+</html>
