@@ -18,15 +18,21 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// 动态添加教师
+// 添加教师
 document.getElementById('addTeacherBtn').addEventListener('click', () => {
     const newTeacherInput = document.getElementById('newTeacherInput');
     const newTeacherName = newTeacherInput.value.trim();
     if (newTeacherName) {
         const teachersRef = ref(database, 'teachers');
-        push(teachersRef, newTeacherName);
-        newTeacherInput.value = '';
-        alert('教师已添加！');
+        push(teachersRef, newTeacherName)
+            .then(() => {
+                newTeacherInput.value = '';
+                alert('教师已添加！');
+            })
+            .catch((error) => {
+                console.error("添加教师失败:", error);
+                alert('无法添加教师，请稍后重试！');
+            });
     } else {
         alert('请输入教师名称！');
     }
@@ -66,10 +72,15 @@ document.getElementById('ratingForm').addEventListener('submit', function (event
         rating: rating,
         comment: comment,
         timestamp: Date.now()
+    })
+    .then(() => {
+        alert('感谢您的反馈！');
+        this.reset();
+    })
+    .catch((error) => {
+        console.error("评论提交失败:", error);
+        alert('无法提交评论，请稍后重试！');
     });
-
-    alert('感谢您的反馈！');
-    this.reset();
 });
 
 // 加载评论
