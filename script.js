@@ -1,6 +1,6 @@
 // Import Firebase SDK
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -18,24 +18,34 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// 添加教师
+// 添加教师并检查重复
 document.getElementById('addTeacherBtn').addEventListener('click', () => {
     const newTeacherInput = document.getElementById('newTeacherInput');
     const newTeacherName = newTeacherInput.value.trim();
-    if (newTeacherName) {
-        const teachersRef = ref(database, 'teachers');
-        push(teachersRef, newTeacherName)
-            .then(() => {
-                newTeacherInput.value = '';
-                alert('教师已添加！');
-            })
-            .catch((error) => {
-                console.error("添加教师失败:", error);
-                alert('无法添加教师，请稍后重试！');
-            });
-    } else {
+    if (!newTeacherName) {
         alert('请输入教师名称！');
+        return;
     }
+
+    const teachersRef = ref(database, 'teachers');
+    onValue(teachersRef, (snapshot) => {
+        const teachers = snapshot.val() || {};
+        const teacherNames = Object.values(teachers);
+
+        if (teacherNames.includes(newTeacherName)) {
+            alert('教师已存在！');
+        } else {
+            push(teachersRef, newTeacherName)
+                .then(() => {
+                    newTeacherInput.value = '';
+                    alert('教师已添加！');
+                })
+                .catch((error) => {
+                    console.error("添加教师失败:", error);
+                    alert('无法添加教师，请稍后重试！');
+                });
+        }
+    }, { onlyOnce: true });
 });
 
 // 加载教师列表
@@ -69,7 +79,7 @@ document.getElementById('ratingForm').addEventListener('submit', function (event
     const newReviewRef = push(ref(database, 'reviews'));
     set(newReviewRef, {
         teacher: teacher,
-        rating: rating,
+        rating: parseInt(rating, 10),
         comment: comment,
         timestamp: Date.now()
     })
@@ -85,13 +95,18 @@ document.getElementById('ratingForm').addEventListener('submit', function (event
 
 // 加载评论
 const reviewsDiv = document.getElementById('reviews');
+const teacherRatingsDiv = document.getElementById('teacherRatings');
 onValue(ref(database, 'reviews'), (snapshot) => {
     reviewsDiv.innerHTML = '';
     const reviews = snapshot.val();
+    const teacherScores = {};
+
     if (!reviews) {
         reviewsDiv.innerHTML = '<p>暂无评论。</p>';
+        teacherRatingsDiv.innerHTML = '<p>暂无数据。</p>';
         return;
     }
+
     for (let id in reviews) {
         const review = reviews[id];
         const reviewItem = document.createElement('div');
@@ -102,5 +117,20 @@ onValue(ref(database, 'reviews'), (snapshot) => {
             <hr>
         `;
         reviewsDiv.appendChild(reviewItem);
+
+        // 统计每位教师的评分
+        if (!teacherScores[review.teacher]) {
+            teacherScores[review.teacher] = [];
+        }
+        teacherScores[review.teacher].push(review.rating);
     }
+
+    // 计算平均分并显示
+    teacherRatingsDiv.innerHTML = '';
+    Object.entries(teacherScores).forEach(([teacher, scores]) => {
+        const average = (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2);
+        const teacherItem = document.createElement('div');
+        teacherItem.innerHTML = `<p>${teacher}: 平均分 ${average}</p>`;
+        teacherRatingsDiv.appendChild(teacherItem);
+    });
 });
