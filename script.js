@@ -1,58 +1,30 @@
-document.addEventListener('DOMContentLoaded', function () {
-    const teacherSelect = document.getElementById('teacher');
-    const savedTeachers = JSON.parse(localStorage.getItem('teachers')) || [];
+// Import Firebase SDK
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
-    // 加载保存的教师列表
-    if (savedTeachers.length === 0) {
-        teacherSelect.innerHTML = '<option value="" disabled selected>暂无教师，请添加</option>';
-    } else {
-        savedTeachers.forEach(teacher => {
-            const option = document.createElement('option');
-            option.value = teacher;
-            option.textContent = teacher;
-            teacherSelect.appendChild(option);
-        });
-    }
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyAgFE8-KCA0pLUz6TXWRJmGK4hS3DhkXe0",
+    authDomain: "rate-my-teacher-jlhs.firebaseapp.com",
+    databaseURL: "https://rate-my-teacher-jlhs-default-rtdb.firebaseio.com",
+    projectId: "rate-my-teacher-jlhs",
+    storageBucket: "rate-my-teacher-jlhs.firebasestorage.app",
+    messagingSenderId: "796156044882",
+    appId: "1:796156044882:web:f1f71d607e1a2912c1e18b",
+    measurementId: "G-7HTQBBZNC7"
+};
 
-    // 加载保存的评论记录
-    const reviewsDiv = document.getElementById('reviews');
-    const savedReviews = JSON.parse(localStorage.getItem('reviews')) || [];
-    if (savedReviews.length === 0) {
-        reviewsDiv.innerHTML = '<p>暂无评论。</p>';
-    } else {
-        reviewsDiv.innerHTML = '';
-        savedReviews.forEach(review => {
-            const reviewItem = document.createElement('div');
-            reviewItem.innerHTML = `
-                <p><strong>教师：</strong>${review.teacher}</p>
-                <p><strong>评分：</strong>${review.rating}</p>
-                <p><strong>评论：</strong>${review.comment}</p>
-                <hr>
-            `;
-            reviewsDiv.appendChild(reviewItem);
-        });
-    }
-});
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
 
-// 添加教师按钮逻辑
-document.getElementById('addTeacherBtn').addEventListener('click', function () {
+// 动态添加教师
+document.getElementById('addTeacherBtn').addEventListener('click', () => {
     const newTeacherInput = document.getElementById('newTeacherInput');
     const newTeacherName = newTeacherInput.value.trim();
-    const teacherSelect = document.getElementById('teacher');
-
     if (newTeacherName) {
-        // 更新下拉菜单
-        const option = document.createElement('option');
-        option.value = newTeacherName;
-        option.textContent = newTeacherName;
-        teacherSelect.appendChild(option);
-
-        // 更新 Local Storage
-        const savedTeachers = JSON.parse(localStorage.getItem('teachers')) || [];
-        savedTeachers.push(newTeacherName);
-        localStorage.setItem('teachers', JSON.stringify(savedTeachers));
-
-        // 清空输入框
+        const teachersRef = ref(database, 'teachers');
+        push(teachersRef, newTeacherName);
         newTeacherInput.value = '';
         alert('教师已添加！');
     } else {
@@ -60,7 +32,22 @@ document.getElementById('addTeacherBtn').addEventListener('click', function () {
     }
 });
 
-// 提交评论逻辑
+// 加载教师列表
+const teacherSelect = document.getElementById('teacher');
+onValue(ref(database, 'teachers'), (snapshot) => {
+    teacherSelect.innerHTML = '<option value="" disabled selected>请选择教师</option>';
+    const teachers = snapshot.val();
+    if (teachers) {
+        Object.values(teachers).forEach(teacher => {
+            const option = document.createElement('option');
+            option.value = teacher;
+            option.textContent = teacher;
+            teacherSelect.appendChild(option);
+        });
+    }
+});
+
+// 提交评论
 document.getElementById('ratingForm').addEventListener('submit', function (event) {
     event.preventDefault();
 
@@ -73,31 +60,36 @@ document.getElementById('ratingForm').addEventListener('submit', function (event
         return;
     }
 
-    const newReview = { teacher, rating, comment };
-
-    // 更新评论记录
-    const savedReviews = JSON.parse(localStorage.getItem('reviews')) || [];
-    savedReviews.push(newReview);
-    localStorage.setItem('reviews', JSON.stringify(savedReviews));
-
-    // 显示新的评论
-    const reviewsDiv = document.getElementById('reviews');
-    const reviewItem = document.createElement('div');
-    reviewItem.innerHTML = `
-        <p><strong>教师：</strong>${teacher}</p>
-        <p><strong>评分：</strong>${rating}</p>
-        <p><strong>评论：</strong>${comment}</p>
-        <hr>
-    `;
-    reviewsDiv.appendChild(reviewItem);
+    const newReviewRef = push(ref(database, 'reviews'));
+    set(newReviewRef, {
+        teacher: teacher,
+        rating: rating,
+        comment: comment,
+        timestamp: Date.now()
+    });
 
     alert('感谢您的反馈！');
     this.reset();
 });
-document.getElementById('clearStorageBtn').addEventListener('click', function () {
-    if (confirm('确定要清除所有数据吗？此操作无法撤销！')) {
-        localStorage.clear();
-        alert('所有数据已清除！');
-        location.reload(); // 刷新页面以更新显示
+
+// 加载评论
+const reviewsDiv = document.getElementById('reviews');
+onValue(ref(database, 'reviews'), (snapshot) => {
+    reviewsDiv.innerHTML = '';
+    const reviews = snapshot.val();
+    if (!reviews) {
+        reviewsDiv.innerHTML = '<p>暂无评论。</p>';
+        return;
+    }
+    for (let id in reviews) {
+        const review = reviews[id];
+        const reviewItem = document.createElement('div');
+        reviewItem.innerHTML = `
+            <p><strong>教师：</strong>${review.teacher}</p>
+            <p><strong>评分：</strong>${review.rating}</p>
+            <p><strong>评论：</strong>${review.comment}</p>
+            <hr>
+        `;
+        reviewsDiv.appendChild(reviewItem);
     }
 });
